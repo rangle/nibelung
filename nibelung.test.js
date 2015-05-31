@@ -47,7 +47,7 @@ describe('Hoard', function () {
     // But inserting one more item should kick 'a' out.
     var zItem = {
       'id': 'z',
-      foo: 'fooBarQux'
+      foo: 'fooBarQuux'
     };
     hoard.put([zItem], 'id');
 
@@ -69,7 +69,7 @@ describe('Hoard', function () {
       foo: 'bar'
     }, {
       id: 'b',
-      foo: 'qux'
+      foo: 'quux'
     }];
 
     testItems2 = [{
@@ -77,7 +77,7 @@ describe('Hoard', function () {
       foo: 'bar2'
     }, {
       id: 'w',
-      foo: 'qux2'
+      foo: 'quux2'
     }];
 
     // In reality, Date.now()'s ~15ms precision is good enough for our purposes.
