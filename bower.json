@@ -1,0 +1,29 @@
+{
+  "name": "nibelung",
+  "version": "0.0.1",
+  "homepage": "https://github.com/rangle/nibelung",
+  "main": "nibelung.js",
+  "authors": [
+    "Seth Davenport <seth@rangle.io>"
+  ],
+  "description": "Caching library backed by browser local storage.",
+  "keywords": [
+    "Cache",
+    "localStorage",
+    "sessionStorage",
+    "TTL"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "devDependencies": {
+    "mocha": "~2.2.5",
+    "karma": "~0.4.6",
+    "ramda": "~0.14.0"
+  }
+}
