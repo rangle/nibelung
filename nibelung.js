@@ -18,35 +18,38 @@
       R.keys,
       R.filter(_isKeyInNamespace),
       R.map(_getRecord),
+      R.reject(R.eq(undefined)),
       R.sortBy(R.prop('lastUpdateTimeMs')),
       R.reverse);
 
+    var _getRecordsByKey = R.pipe(
+      R.map(_wrapKey),
+      R.map(_getRecord),
+      R.reject(R.eq(undefined)));
+
     this.get = function get(keys) {
-      return R.reject(
-        R.eq(undefined),
-        R.map(function (key) {
-          var cacheKey = _makeKey(key);
-          var record = _getRecord(cacheKey);
-          return record && !_isRecordExpired(record) ?
-            record.value : undefined;
-        }, keys));
+      return R.map(
+        _unwrapValue,
+        _getRecordsByKey(keys));
     };
 
     this.put = function put(values, keyName) {
       R.forEach(function (value) {
-        var cacheKey = _makeKey(value[keyName]);
-        _cache[cacheKey] = _makeCacheRecord(cacheKey, value);
+        var cacheKey = _wrapKey(value[keyName]);
+        _cache[cacheKey] = _wrapValue(cacheKey, value);
       }, values);
 
       _enforceMaxRecords();
-      _enforceTimeToLive();
     };
 
     /** Filters the keys by what's not already cached. */
     this.excludes = function excludes(keys) {
-      return R.reject(function (key) {
-        return _cache.hasOwnProperty(_makeKey(key));
-      }, keys);
+      var findRecords = R.pipe(
+        _getRecordsByKey,
+        R.pluck('key'),
+        R.map(_unwrapKey));
+
+      return R.difference(keys, findRecords(keys));
     };
 
     /**
@@ -66,16 +69,28 @@
       _cache.clear();
     };
 
-    function _makeKey(key) {
+    function _wrapKey(key) {
       return [namespace, key].join('-');
     }
 
-    function _makeCacheRecord(key, value) {
+    function _unwrapKey(key) {
+      return key.replace(namespace + '-', '');
+    }
+
+    function _wrapValue(key, value) {
       return JSON.stringify({
         key: key,
         value: value,
         lastUpdateTimeMs: _clock.now()
       });
+    }
+
+    function _unwrapValue(record) {
+      if (record) {
+        return record.value;
+      }
+
+      return undefined;
     }
 
     function _isKeyInNamespace(key) {
@@ -88,7 +103,14 @@
         return undefined;
       }
 
-      return JSON.parse(json);
+      var record = JSON.parse(json);
+
+      if (record && _isRecordExpired(record)) {
+        _cache.removeItem(key);
+        return undefined;
+      }
+
+      return record;
     }
 
     function _enforceMaxRecords() {
@@ -100,16 +122,6 @@
       var recordsOverCap = R.slice(maxRecords, allRecords.length)(
         allRecords);
       _dropRecords(recordsOverCap);
-    }
-
-    function _enforceTimeToLive() {
-      if (!ttlMilliseconds) {
-        return;
-      }
-
-      var allRecords = _getRecordsByLastUpdateTime(_cache);
-      var expiredRecords = R.filter(_isRecordExpired, allRecords);
-      _dropRecords(expiredRecords);
     }
 
     function _dropRecords(records) {
