@@ -58,9 +58,11 @@ describe('Hoard', function () {
   it('enforces a time-to-live', function () {
     hoard.put(testItems, 'id');
     expect(hoard.get(['a'])).not.to.eql([]);
+    expect(hoard.excludes(['a'])).to.eql([]);
 
     mockClock.advanceClock(100);
     expect(hoard.get(['a'])).to.eql([]);
+    expect(hoard.excludes(['a'])).to.eql(['a']);
   });
 
   function initMocks() {
