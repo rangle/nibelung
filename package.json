@@ -4,7 +4,8 @@
   "description": "",
   "main": "nibelung.js",
   "scripts": {
-    "test": "karma *.test.js"
+    "test": "karma start",
+    "postinstall": "bower install"
   },
   "repository": {
     "type": "git",
@@ -21,7 +22,13 @@
     "karma": "^0.12.35",
     "karma-mocha": "^0.1.10",
     "karma-phantomjs-launcher": "^0.2.0",
-    "mocha": "^2.2.5",
-    "phantomjs": "^1.9.17"
+    "mocha": "~2.2.5",
+    "phantomjs": "^1.9.17",
+    "karma-firefox-launcher": "~0.1.6",
+    "karma-chrome-launcher": "~0.1.12",
+    "istanbul": "~0.3.14",
+    "karma-coverage": "~0.3.1",
+    "karma-threshold-reporter": "~0.1.15",
+    "bower": "~1.4.1"
   }
 }
