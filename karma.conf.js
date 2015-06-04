@@ -13,12 +13,32 @@ module.exports = function(config) {
 
     exclude: [],
     preprocessors: {},
-    reporters: ['progress'],
     port: 9876,
     colors: true,
     logLevel: config.LOG_INFO,
     autoWatch: true,
-    browsers: ['PhantomJS'],
-    singleRun: false
+    singleRun: true,
+
+    browsers: ['PhantomJS', 'Chrome', 'Firefox'],
+    reporters: ['progress', 'coverage','threshold'],
+    preprocessors: {
+      '!(*.test).js': 'coverage'
+    },
+    coverageReporter: {
+      reporters: [{
+        type: 'json'
+      }, {
+        type: 'html'
+      }, {
+        type: 'text-summary'
+      }],
+      dir: 'coverage'
+    },
+    thresholdReporter: {
+      statements: 85,
+      branches: 60,
+      functions: 85,
+      lines: 85
+    }
   });
 };
