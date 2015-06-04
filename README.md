@@ -1,4 +1,4 @@
-# Nibelung
+# Nibelung [![Circle CI](https://circleci.com/gh/rangle/nibelung.svg?style=svg)](https://circleci.com/gh/rangle/nibelung)
 
 A library for caching things locally in websites or mobile apps.
 
