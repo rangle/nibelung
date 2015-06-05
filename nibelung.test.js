@@ -7,6 +7,7 @@ describe('Hoard', function () {
   var testItems;
   var testItems2;
   var mockClock;
+  var mockReentrancyProtector;
 
   beforeEach(initMocks);
   beforeEach(initHoard);
@@ -65,6 +66,45 @@ describe('Hoard', function () {
     expect(hoard.excludes(['a'])).to.eql(['a']);
   });
 
+  it('emits PUT events', function () {
+    var putHandler = sinon.spy(function () {});
+
+    hoard.on('PUT', putHandler);
+    hoard.put([testItems[0]], 'id');
+    expect(putHandler.calledOnce).to.eql(true);
+    expect(putHandler.calledWith(testItems[0]));
+
+    putHandler.reset();
+    hoard.off('PUT', putHandler);
+    hoard.put([testItems[1]], 'id');
+    expect(putHandler.calledOnce).to.eql(false);
+  });
+
+  it('emits CLEAR events', function () {
+    var clearHandler = sinon.spy(function () {});
+
+    hoard.on('CLEAR', clearHandler);
+    hoard.clear();
+    expect(clearHandler.calledOnce).to.eql(true);
+
+    clearHandler.reset();
+    hoard.off('CLEAR', clearHandler);
+    hoard.clear();
+    expect(clearHandler.calledOnce).to.eql(false);
+  });
+
+  it('complains if you register for a bad event', function () {
+    var error = null;
+    try {
+      hoard.on('GOBBLEDYGOOK', function () {});
+    }
+    catch (e) {
+      error = e;
+    }
+
+    expect(error).to.not.equal(null);
+  });
+
   function initMocks() {
     testItems = [{
       id: 'a',
@@ -94,6 +134,14 @@ describe('Hoard', function () {
         tick += ticks;
       }
     };
+
+    // In reality, events are emitted using window.timeout to avoid re-entrancy
+    // problems.  In the tests, we'd like handlers to be called immediately.
+    mockReentrancyProtector = {
+      protect: function (fn) {
+        fn();
+      }
+    };
   }
 
   function initHoard() {
@@ -103,7 +151,8 @@ describe('Hoard', function () {
       maxRecords: 4,
       ttlMilliseconds: 100
     },
-    mockClock);
+    mockClock,
+    mockReentrancyProtector);
 
     hoard.clear();
   }
