@@ -4,10 +4,11 @@
 module.exports = function(config) {
   config.set({
     basePath: '',
-    frameworks: ['mocha'],
+    frameworks: ['mocha', 'chai', 'sinon'],
     files: [
       'bower_components/ramda/dist/ramda.js',
       'node_modules/chai/chai.js',
+      'node_modules/sinon/pkg/sinon.js',
       '*.js'
     ],
 
@@ -19,7 +20,7 @@ module.exports = function(config) {
     autoWatch: true,
     singleRun: true,
 
-    browsers: ['PhantomJS', 'Chrome', 'Firefox'],
+    browsers: ['PhantomJS'],
     reporters: ['progress', 'coverage','threshold'],
     preprocessors: {
       '!(*.test).js': 'coverage'
@@ -37,7 +38,7 @@ module.exports = function(config) {
     thresholdReporter: {
       statements: 85,
       branches: 60,
-      functions: 85,
+      functions: 80,
       lines: 85
     }
   });

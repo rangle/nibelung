@@ -1,18 +1,23 @@
 (function(global) {
   'use strict';
 
-  function DefaultClock() {
-    this.now = function() {
-      return Date.now();
-    }
-  }
+  var nibelung = {
+    Hoard: Hoard
+  };
 
-  function Hoard(options, clock) {
+  var __eventSinks = {};
+
+  function Hoard(options, clock, reentrancyProtector) {
     var namespace = options.namespace;
     var ttlMilliseconds = options.ttlMilliseconds;
     var maxRecords = options.maxRecords;
-    var _clock = clock || new DefaultClock();
     var _cache = options.persistent ? window.localStorage : window.sessionStorage;
+    var _clock = clock || new DefaultClock();
+    var _reentrancyProtector = reentrancyProtector || new DefaultReentrancyProtector();
+
+    __eventSinks[namespace] = __eventSinks[namespace] || new EventSink([
+      'PUT', 'DELETE', 'CLEAR'
+    ]);
 
     var _getRecordsByLastUpdateTime = R.pipe(
       R.keys,
@@ -37,6 +42,7 @@
       R.forEach(function (value) {
         var cacheKey = _wrapKey(value[keyName]);
         _cache[cacheKey] = _wrapValue(cacheKey, value);
+        __eventSinks[namespace].emit('PUT', value, _reentrancyProtector);
       }, values);
 
       _enforceMaxRecords();
@@ -67,6 +73,15 @@
 
     this.clear = function clear() {
       _cache.clear();
+      __eventSinks[namespace].emit('CLEAR', undefined, _reentrancyProtector);
+    };
+
+    this.on = function on(event, handler) {
+      __eventSinks[namespace].on(event, handler);
+    };
+
+    this.off = function off(event, handler) {
+      __eventSinks[namespace].off(event, handler);
     };
 
     function _wrapKey(key) {
@@ -107,6 +122,10 @@
 
       if (record && _isRecordExpired(record)) {
         _cache.removeItem(key);
+        __eventSinks[namespace].emit(
+          'DELETE',
+          _unwrapValue(record),
+          _reentrancyProtector);
         return undefined;
       }
 
@@ -140,9 +159,60 @@
     }
   }
 
-  var nibelung = {
-    Hoard: Hoard
-  };
+  function DefaultClock() {
+    this.now = function() {
+      return Date.now();
+    }
+  }
+
+  // Protects emit calls against re-entancy and exception-prone handlers.
+  function DefaultReentrancyProtector() {
+    this.protect = function(fn) {
+      return window.setTimeout(fn, 0);
+    }
+  }
+
+  function EventSink(legalEvents) {
+    var _handlers = {};
+    var _legalEvents = [].concat(legalEvents); // Defensive copy.
+
+    this.on = function on(event, handler) {
+      _assertLegalEvent(event);
+
+      if (!_handlers[event]) {
+        _handlers[event] = [];
+      }
+
+      _handlers[event].push(handler);
+    }
+
+    this.off = function off(event, handler) {
+      _assertLegalEvent(event);
+
+      if (_handlers[event]) {
+        _handlers[event] = R.reject(R.eq(handler), _handlers[event]);
+      }
+    }
+
+    this.emit = function emit(event, data, reentrancyProtector) {
+      _assertLegalEvent(event);
+      if (!_handlers[event] || !_handlers[event].length) {
+        return;
+      }
+
+      R.forEach(function _handle(handler) {
+        reentrancyProtector.protect(function () {
+          handler(event, data);
+        }, 0);
+      }, _handlers[event]);
+    }
+
+    function _assertLegalEvent(event) {
+      if (!R.contains(event, _legalEvents)) {
+        throw new Error('Invalid event: ' + event);
+      }
+    }
+  }
 
   if (typeof exports === 'object') {
      module.exports = nibelung;
