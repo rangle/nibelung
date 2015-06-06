@@ -7,16 +7,16 @@
 
   var __eventSinks = {};
 
-  function Hoard(options, clock, reentrancyProtector) {
+  function Hoard(options) {
     var namespace = options.namespace;
     var ttlMilliseconds = options.ttlMilliseconds;
     var maxRecords = options.maxRecords;
     var _cache = options.persistent ? window.localStorage : window.sessionStorage;
-    var _clock = clock || new DefaultClock();
-    var _reentrancyProtector = reentrancyProtector || new DefaultReentrancyProtector();
+    var _clock = options.clock || new DefaultClock();
+    var _reentrancyProtector = options.reentrancyProtector || new DefaultReentrancyProtector();
 
     __eventSinks[namespace] = __eventSinks[namespace] || new EventSink([
-      'PUT', 'DELETE', 'CLEAR'
+      'PUT', 'REMOVE', 'CLEAR'
     ]);
 
     var _getRecordsByLastUpdateTime = R.pipe(
@@ -32,6 +32,18 @@
       R.map(_getRecord),
       R.reject(R.eq(undefined)));
 
+    this.getOne = function getOne(key) {
+      return this.get([key])[0];
+    };
+
+    this.putOne = function putOne(key, value) {
+      _put(key, value);
+    };
+
+    this.removeOne = function deleteOne(key) {
+      this.remove([key]);
+    };
+
     this.get = function get(keys) {
       return R.map(
         _unwrapValue,
@@ -40,13 +52,20 @@
 
     this.put = function put(values, keyName) {
       R.forEach(function (value) {
-        var cacheKey = _wrapKey(value[keyName]);
-        _cache[cacheKey] = _wrapValue(cacheKey, value);
-        __eventSinks[namespace].emit('PUT', value, _reentrancyProtector);
+        _put(value[keyName], value);
       }, values);
 
       _enforceMaxRecords();
     };
+
+    this.remove = function remove(keys) {
+      R.forEach(function(key) {
+        var record = _getRecord(_wrapKey(key));
+        if (record) {
+          _dropRecord(record);
+        }
+      }, keys);
+    }
 
     /** Filters the keys by what's not already cached. */
     this.excludes = function excludes(keys) {
@@ -121,11 +140,7 @@
       var record = JSON.parse(json);
 
       if (record && _isRecordExpired(record)) {
-        _cache.removeItem(key);
-        __eventSinks[namespace].emit(
-          'DELETE',
-          _unwrapValue(record),
-          _reentrancyProtector);
+        _dropRecord(record);
         return undefined;
       }
 
@@ -144,9 +159,7 @@
     }
 
     function _dropRecords(records) {
-      records.forEach(function (record) {
-        _cache.removeItem(record.key);
-      });
+      records.forEach(_dropRecord);
     }
 
     function _isRecordExpired(record) {
@@ -157,6 +170,20 @@
       return _clock.now() - record.lastUpdateTimeMs >
         ttlMilliseconds;
     }
+
+    function _dropRecord(record) {
+      _cache.removeItem(record.key);
+      __eventSinks[namespace].emit(
+        'REMOVE',
+        _unwrapValue(record),
+        _reentrancyProtector);
+    }
+
+    function _put(key, value) {
+      var cacheKey = _wrapKey(key);
+      _cache[cacheKey] = _wrapValue(cacheKey, value);
+      __eventSinks[namespace].emit('PUT', value, _reentrancyProtector);
+    }
   }
 
   function DefaultClock() {
@@ -165,7 +192,7 @@
     }
   }
 
-  // Protects emit calls against re-entancy and exception-prone handlers.
+  // Protects emit calls against re-entrancy and exception-prone handlers.
   function DefaultReentrancyProtector() {
     this.protect = function(fn) {
       return window.setTimeout(fn, 0);
