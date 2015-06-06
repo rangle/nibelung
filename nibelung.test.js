@@ -24,6 +24,23 @@ describe('Hoard', function () {
     expect(hoard.get(['b', 'a'])).to.eql(testItems.reverse());
   });
 
+  it('can save load, and remove a single item', function () {
+    var putHandler = sinon.spy(function () {});
+    var deleteHandler = sinon.spy(function () {});
+
+    hoard.on('PUT', putHandler);
+    hoard.putOne(testItems[0].id, testItems[0]);
+    expect(putHandler.calledOnce).to.eql(true);
+    expect(putHandler.calledWith(testItems[0]));
+    expect(hoard.getOne(testItems[0].id)).to.eql(testItems[0]);
+
+    hoard.on('REMOVE', deleteHandler);
+    hoard.removeOne(testItems[0].id);
+    expect(putHandler.calledOnce).to.eql(true);
+    expect(putHandler.calledWith(testItems[0].id));
+    expect(hoard.getOne(testItems[0].id)).to.eql(undefined);
+  });
+
   it('can tell who\'s not in the hoard', function () {
     hoard.put(testItems, 'id');
     expect(hoard.excludes(['a', 'b', 'c'])).to.eql(['c']);
@@ -149,10 +166,10 @@ describe('Hoard', function () {
       namespace: 'unitTest',
       persistent: false,
       maxRecords: 4,
-      ttlMilliseconds: 100
-    },
-    mockClock,
-    mockReentrancyProtector);
+      ttlMilliseconds: 100,
+      clock: mockClock,
+      reentrancyProtector: mockReentrancyProtector
+    });
 
     hoard.clear();
   }
