@@ -11,9 +11,10 @@
     var namespace = options.namespace;
     var ttlMilliseconds = options.ttlMilliseconds;
     var maxRecords = options.maxRecords;
-    var _cache = options.persistent ? window.localStorage : window.sessionStorage;
+    var _cache = _createStorageInstance(options.persistent);
     var _clock = options.clock || new DefaultClock();
     var _reentrancyProtector = options.reentrancyProtector || new DefaultReentrancyProtector();
+    var _logger = options.logger;
 
     __eventSinks[namespace] = __eventSinks[namespace] || new EventSink([
       'PUT', 'REMOVE', 'CLEAR'
@@ -92,6 +93,7 @@
 
     this.clear = function clear() {
       _cache.clear();
+      _cache = _createStorageInstance(options.persistent);
       __eventSinks[namespace].emit('CLEAR', undefined, _reentrancyProtector);
     };
 
@@ -183,6 +185,33 @@
       var cacheKey = _wrapKey(key);
       _cache[cacheKey] = _wrapValue(cacheKey, value);
       __eventSinks[namespace].emit('PUT', value, _reentrancyProtector);
+    }
+
+    function _createStorageInstance(persistent) {
+      try {
+        var storage = persistent ? window.localStorage : window.sessionStorage;
+
+        // Test that we can actually use the storage:
+        storage.putItem('test', true);
+        return storage;
+      }
+      catch (e) {
+        _log('Unable to create storage, falling back to in-memory data: ' + e);
+        return {
+          clear: function () {}
+        };
+      }
+    }
+
+    function _log(message) {
+      if (!_logger) {
+        return;
+      }
+
+      _logger(
+        ['[' + options.namespace + ']',
+        (options.persistent ? '[persistent]' : ''),
+        message].join(' '));
     }
   }
 
