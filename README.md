@@ -35,7 +35,24 @@ The following options are supported:
   // If set to a positive integer, the number of cache records will be capped
   // at that number.  Records will be dropped using a least-recently-used
   // strategy based on last write time.  If omitted, no cap will be enforced.
-  maxRecords: 100
+  maxRecords: 100,
+
+  // Used to generate timestamps for records. Can be any object with a .now()
+  // function that returns strings strictly ordered in time. If omitted,
+  // Date.now() is used instead.
+  clock: { now: function () { ... } }
+
+  // Used to protect event handlers against reentrancy.  Reentrancy can happen
+  // when an event handler makes changes to the cache, resulting in more events
+  // happening within the callstack of the first event. Can be any object with
+  // a .protect() function that executes its argument. If omitted,
+  // window.setTimeout(handler, 0) is used instead.  
+  reentrancyProtector: { protect: function (fn) { ... } }
+
+  // Used to log warnings and errors that happen within the library.  Can be
+  // any function that accepts a string argument. If omitted, no logs will be
+  // generated.
+  logger: function (message) { ... }
 }
 ```
 
