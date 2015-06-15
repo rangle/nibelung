@@ -192,7 +192,7 @@
         var storage = persistent ? window.localStorage : window.sessionStorage;
 
         // Test that we can actually use the storage:
-        storage.putItem('test', true);
+        storage.setItem('test', true);
         return storage;
       }
       catch (e) {
