@@ -4,8 +4,7 @@
   "description": "",
   "main": "nibelung.js",
   "scripts": {
-    "test": "karma start",
-    "postinstall": "bower install"
+    "test": "karma start"
   },
   "repository": {
     "type": "git",

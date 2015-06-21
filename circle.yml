@@ -1,0 +1,7 @@
+dependencies:
+  post:
+    - bower install
+test:
+  post:
+    # Save coverage data.
+    - cp -r ./coverage/* $CIRCLE_ARTIFACTS
