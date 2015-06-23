@@ -1,6 +1,10 @@
 (function(global) {
   'use strict';
 
+  // Actual field names are kept short to reduce space overhead in localStorage.
+  var fLAST_UPDATE_TIME = 't';
+  var fVALUE = 'v';
+
   var nibelung = {
     Hoard: Hoard
   };
@@ -25,8 +29,17 @@
       R.filter(_isKeyInNamespace),
       R.map(_getRecord),
       R.reject(R.eq(undefined)),
-      R.sortBy(R.prop('lastUpdateTimeMs')),
+      R.sortBy(R.prop(fLAST_UPDATE_TIME)),
       R.reverse);
+
+    var _getKeysByLastUpdateTime = R.pipe(
+      R.keys,
+      R.filter(_isKeyInNamespace),
+      R.map(_getKeyRecordPair),
+      R.reject(R.propEq('r', undefined)),
+      R.sortBy(R.path(['r', fLAST_UPDATE_TIME])),
+      R.reverse,
+      R.pluck('k'));
 
     var _getRecordsByKey = R.pipe(
       R.map(_wrapKey),
@@ -61,21 +74,13 @@
 
     this.remove = function remove(keys) {
       R.forEach(function(key) {
-        var record = _getRecord(_wrapKey(key));
-        if (record) {
-          _dropRecord(record);
-        }
+        _dropRecord(key);
       }, keys);
     }
 
     /** Filters the keys by what's not already cached. */
     this.excludes = function excludes(keys) {
-      var findRecords = R.pipe(
-        _getRecordsByKey,
-        R.pluck('key'),
-        R.map(_unwrapKey));
-
-      return R.difference(keys, findRecords(keys));
+      return R.reject(_keyExists, keys);
     };
 
     /**
@@ -86,7 +91,7 @@
       var computeLatest = R.pipe(
         _getRecordsByLastUpdateTime,
         R.slice(0, limit),
-        R.map(R.prop('value')));
+        R.map(R.prop(fVALUE)));
 
       return computeLatest(_cache);
     };
@@ -106,24 +111,23 @@
     };
 
     function _wrapKey(key) {
-      return [namespace, key].join('-');
+      return [namespace, key].join('');
     }
 
     function _unwrapKey(key) {
-      return key.replace(namespace + '-', '');
+      return key.replace(namespace, '');
     }
 
     function _wrapValue(key, value) {
-      return JSON.stringify({
-        key: key,
-        value: value,
-        lastUpdateTimeMs: _clock.now()
-      });
+      var record = {};
+      record[fVALUE] = value;
+      record[fLAST_UPDATE_TIME] = _clock.now();
+      return JSON.stringify(record);
     }
 
     function _unwrapValue(record) {
       if (record) {
-        return record.value;
+        return record[fVALUE];
       }
 
       return undefined;
@@ -133,8 +137,8 @@
       return key && key.indexOf(namespace) === 0;
     }
 
-    function _getRecord(key) {
-      var json = _cache[key];
+    function _getRecord(cacheKey) {
+      var json = _cache[cacheKey];
       if (!json) {
         return undefined;
       }
@@ -142,11 +146,18 @@
       var record = JSON.parse(json);
 
       if (record && _isRecordExpired(record)) {
-        _dropRecord(record);
+        _dropRecord(_unwrapKey(cacheKey));
         return undefined;
       }
 
       return record;
+    }
+
+    function  _getKeyRecordPair(cacheKey) {
+      return {
+        k: _unwrapKey(cacheKey),
+        r: _getRecord(cacheKey)
+      };
     }
 
     function _enforceMaxRecords() {
@@ -154,14 +165,13 @@
         return;
       }
 
-      var allRecords = _getRecordsByLastUpdateTime(_cache);
-      var recordsOverCap = R.slice(maxRecords, allRecords.length)(
-        allRecords);
-      _dropRecords(recordsOverCap);
+      var allKeys = _getKeysByLastUpdateTime(_cache);
+      var keysOverCap = R.slice(maxRecords, allKeys.length)(allKeys);
+      _dropRecords(keysOverCap);
     }
 
-    function _dropRecords(records) {
-      records.forEach(_dropRecord);
+    function _dropRecords(keys) {
+      keys.forEach(_dropRecord);
     }
 
     function _isRecordExpired(record) {
@@ -169,15 +179,20 @@
         return false;
       }
 
-      return _clock.now() - record.lastUpdateTimeMs >
+      return _clock.now() - record[fLAST_UPDATE_TIME] >
         ttlMilliseconds;
     }
 
-    function _dropRecord(record) {
-      _cache.removeItem(record.key);
+    function _dropRecord(key) {
+      if (!_keyExists(key)) {
+        return;
+      }
+
+      var cacheKey = _wrapKey(key);
+      _cache.removeItem(cacheKey);
       __eventSinks[namespace].emit(
         'REMOVE',
-        _unwrapValue(record),
+        key,
         _reentrancyProtector);
     }
 
@@ -185,6 +200,11 @@
       var cacheKey = _wrapKey(key);
       _cache[cacheKey] = _wrapValue(cacheKey, value);
       __eventSinks[namespace].emit('PUT', value, _reentrancyProtector);
+    }
+
+    function _keyExists(key) {
+      var cacheKey = _wrapKey(key);
+      return _cache.hasOwnProperty(cacheKey);
     }
 
     function _createStorageInstance(persistent) {

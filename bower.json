@@ -1,6 +1,6 @@
 {
   "name": "nibelung",
-  "version": "0.1.4",
+  "version": "0.2.4",
   "homepage": "https://github.com/rangle/nibelung",
   "main": "nibelung.js",
   "authors": [
@@ -24,6 +24,6 @@
   "devDependencies": {
     "mocha": "~2.2.5",
     "karma": "~0.4.6",
-    "ramda": "~0.14.0"
+    "ramda": "~0.15.0"
   }
 }
