@@ -6,7 +6,7 @@ module.exports = function(config) {
     basePath: '',
     frameworks: ['mocha', 'chai', 'sinon'],
     files: [
-      'bower_components/ramda/dist/ramda.js',
+      'node_modules/ramda/dist/ramda.js',
       'node_modules/chai/chai.js',
       'node_modules/sinon/pkg/sinon.js',
       '*.js'
