@@ -1,6 +1,10 @@
 (function(global) {
   'use strict';
 
+  var R = typeof exports === 'object' ?
+    module.require('ramda') :
+    global.R;
+
   // Actual field names are kept short to reduce space overhead in localStorage.
   var fLAST_UPDATE_TIME = 't';
   var fVALUE = 'v';

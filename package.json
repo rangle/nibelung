@@ -1,6 +1,6 @@
 {
   "name": "nibelung",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "description": "",
   "main": "nibelung.js",
   "scripts": {
@@ -32,5 +32,8 @@
     "mocha": "~2.2.5",
     "phantomjs": "^1.9.17",
     "sinon": "^1.14.1"
+  },
+  "dependencies": {
+    "ramda": "~0.15.1"
   }
 }
