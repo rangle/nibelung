@@ -1,7 +1,13 @@
 {
   "name": "nibelung",
-  "version": "0.2.5",
-  "description": "",
+  "version": "0.2.6",
+  "description": "Caching library backed by browser local storage.",
+  "keywords": [
+    "Cache",
+    "localStorage",
+    "sessionStorage",
+    "TTL"
+  ],
   "main": "nibelung.js",
   "scripts": {
     "test": "karma start"

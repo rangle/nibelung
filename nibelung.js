@@ -19,10 +19,11 @@
     var namespace = options.namespace;
     var ttlMilliseconds = options.ttlMilliseconds;
     var maxRecords = options.maxRecords;
-    var _cache = _createStorageInstance(options.persistent);
+    var _logger = options.logger;
     var _clock = options.clock || new DefaultClock();
     var _reentrancyProtector = options.reentrancyProtector || new DefaultReentrancyProtector();
-    var _logger = options.logger;
+    var _storageAvailabilityChecker = options.storageAvailabilityChecker || new DefaultStorageAvailabilityChecker();
+    var _cache = _createStorageInstance(options.persistent);
 
     __eventSinks[namespace] = __eventSinks[namespace] || new EventSink([
       'PUT', 'REMOVE', 'CLEAR'
@@ -102,7 +103,6 @@
 
     this.clear = function clear() {
       _cache.clear();
-      _cache = _createStorageInstance(options.persistent);
       __eventSinks[namespace].emit('CLEAR', undefined, _reentrancyProtector);
     };
 
@@ -147,7 +147,13 @@
         return undefined;
       }
 
-      var record = JSON.parse(json);
+      var record;
+      try {
+        record = JSON.parse(json);
+      }
+      catch (e) {
+        _log('Failed to unserialize record: ' + e + ', ' + json);
+      }
 
       if (record && _isRecordExpired(record)) {
         _dropRecord(_unwrapKey(cacheKey));
@@ -193,7 +199,7 @@
       }
 
       var cacheKey = _wrapKey(key);
-      _cache.removeItem(cacheKey);
+        _cache.removeItem(cacheKey);
       __eventSinks[namespace].emit(
         'REMOVE',
         key,
@@ -214,19 +220,12 @@
     function _createStorageInstance(persistent) {
       try {
         var storage = persistent ? window.localStorage : window.sessionStorage;
-
-        // Test that we can actually use the storage:
-        storage.setItem('test', true);
+        _storageAvailabilityChecker.assertAvailable(storage);
         return storage;
       }
       catch (e) {
         _log('Unable to create storage, falling back to in-memory data: ' + e);
-        return {
-          clear: function () {},
-          removeItem: function (key) {
-            this[key] = undefined;
-          }
-        };
+        return new FallbackStorage();
       }
     }
 
@@ -238,7 +237,8 @@
       _logger(
         ['[' + options.namespace + ']',
         (options.persistent ? '[persistent]' : ''),
-        message].join(' '));
+        ' ',
+        message].join(''));
     }
   }
 
@@ -252,6 +252,15 @@
   function DefaultReentrancyProtector() {
     this.protect = function(fn) {
       return window.setTimeout(fn, 0);
+    }
+  }
+
+  // Checks for situations where local storage is unavailable.
+  function DefaultStorageAvailabilityChecker() {
+    this.assertAvailable = function(storage) {
+      // Test that we can actually use the storage; will throw an exception if
+      // we can't.
+      storage.setItem('test', true);
     }
   }
 
@@ -296,6 +305,19 @@
       }
     }
   }
+
+  // Used in cases where localStorage is not available, e.g. Safari private
+  // mode.
+  function FallbackStorage() {}
+  FallbackStorage.prototype.clear = function () {
+    var self = this;
+    R.map(function (key) {
+      self.removeItem(key);
+    }, R.keys(self));
+  };
+  FallbackStorage.prototype.removeItem = function (key) {
+    this[key] = undefined;
+  };
 
   if (typeof exports === 'object') {
      module.exports = nibelung;
