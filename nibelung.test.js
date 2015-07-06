@@ -4,6 +4,9 @@ var expect = chai.expect;
 
 describe('Hoard', function () {
   var hoard;
+  var hoardLogger;
+  var hoardInFallbackMode;
+  var fallbackModeLogger;
   var testItems;
   var testItems2;
   var mockClock;
@@ -122,6 +125,32 @@ describe('Hoard', function () {
     expect(error).to.not.equal(null);
   });
 
+  it('no longer has that bug where a namespace set to the prefix of a storage ' +
+    'function would cause getLatest() to blow up in fallback storage mode',
+    function () {
+      hoardInFallbackMode.putOne('foo', { foo: 'foo' });
+      expect(hoardInFallbackMode.getLatest(10))
+        .to.eql([{ foo: 'foo' }]);
+    });
+
+  it('makes a log entry when localStorage isn\'t available', function () {
+    expect(hoardLogger.calledOnce).to.eql(false);
+    expect(fallbackModeLogger.calledOnce).to.eql(true);
+  });
+
+  it('can still clear records in fallback mode', function () {
+    hoardInFallbackMode.putOne('a', 'b');
+    hoardInFallbackMode.clear();
+    expect(hoardInFallbackMode.getOne('a')).to.eql(undefined);
+  });
+
+  it('doesn\'t blow up if people insert bad data into localStorage manually',
+    function () {
+      window.localStorage.setItem('unitTestFoo', 'I am a baaad record.');
+      expect(hoard.getOne('Foo')).to.eql(undefined);
+      expect(hoard.getLatest(10)).to.eql([]);
+    });
+
   function initMocks() {
     testItems = [{
       id: 'a',
@@ -162,13 +191,31 @@ describe('Hoard', function () {
   }
 
   function initHoard() {
+    hoardLogger = sinon.spy();
     hoard = new nibelung.Hoard({
       namespace: 'unitTest',
       persistent: false,
       maxRecords: 4,
       ttlMilliseconds: 100,
       clock: mockClock,
+      logger: hoardLogger,
       reentrancyProtector: mockReentrancyProtector
+    });
+
+    fallbackModeLogger = sinon.spy();
+    hoardInFallbackMode = new nibelung.Hoard({
+      namespace: 'removeItem',
+      persistent: false,
+      maxRecords: 4,
+      ttlMilliseconds: 100,
+      clock: mockClock,
+      reentrancyProtector: mockReentrancyProtector,
+      logger: fallbackModeLogger,
+      storageAvailabilityChecker: {
+        assertAvailable: function () {
+          throw new Error('nope!');
+        }
+      }
     });
 
     hoard.clear();
