@@ -8,26 +8,27 @@
   // Actual field names are kept short to reduce space overhead in localStorage.
   var fLAST_UPDATE_TIME = 't';
   var fVALUE = 'v';
+  var fDATA_VERSION = '__dv';
 
   var nibelung = {
-    Hoard: Hoard
+    Hoard: Hoard,
+    ClearingVersionChangeHandler: ClearingVersionChangeHandler
   };
 
   var __eventSinks = {};
 
   function Hoard(options) {
+    var _that = this;
     var namespace = options.namespace;
     var ttlMilliseconds = options.ttlMilliseconds;
     var maxRecords = options.maxRecords;
+    var expectedVersion = options.version;
+    var _versionChangeHandler = options.versionChangeHandler || new DefaultVersionChangeHandler();
     var _logger = options.logger;
     var _clock = options.clock || new DefaultClock();
     var _reentrancyProtector = options.reentrancyProtector || new DefaultReentrancyProtector();
     var _storageAvailabilityChecker = options.storageAvailabilityChecker || new DefaultStorageAvailabilityChecker();
-    var _cache = _createStorageInstance(options.persistent);
-
-    __eventSinks[namespace] = __eventSinks[namespace] || new EventSink([
-      'PUT', 'REMOVE', 'CLEAR'
-    ]);
+    var _cache;
 
     var _getRecordsByLastUpdateTime = R.pipe(
       R.keys,
@@ -50,6 +51,10 @@
       R.map(_wrapKey),
       R.map(_getRecord),
       R.reject(R.eq(undefined)));
+
+    this.version = function version() {
+      return _cache[fDATA_VERSION + namespace] || '';
+    }
 
     this.getOne = function getOne(key) {
       return this.get([key])[0];
@@ -113,6 +118,13 @@
     this.off = function off(event, handler) {
       __eventSinks[namespace].off(event, handler);
     };
+
+    __eventSinks[namespace] = __eventSinks[namespace] || new EventSink([
+      'PUT', 'REMOVE', 'CLEAR'
+    ]);
+
+    _cache = _createStorageInstance(options.persistent);
+    _validateDataVersion();
 
     function _wrapKey(key) {
       return [namespace, key].join('');
@@ -229,6 +241,24 @@
       }
     }
 
+    function _validateDataVersion() {
+      var storageKey = fDATA_VERSION + namespace;
+      var actualVersion = _cache[storageKey] || '';
+
+      if (expectedVersion && actualVersion &&
+        actualVersion.toString() !== expectedVersion.toString() &&
+        _versionChangeHandler.onVersionChange(
+          _that,
+          expectedVersion,
+          actualVersion)) {
+        _cache[storageKey] = expectedVersion;
+      }
+
+      if (expectedVersion && !actualVersion) {
+        _cache[storageKey] = expectedVersion;
+      }
+    }
+
     function _log(message) {
       if (!_logger) {
         return;
@@ -261,6 +291,33 @@
       // Test that we can actually use the storage; will throw an exception if
       // we can't.
       storage.setItem('test', true);
+    }
+  }
+
+  // This handler is called when you specify an options.version which is
+  // different than what's saved in a Hoard instance.  Provide a custom
+  // implementation to handle upgrade paths as your schemas change over time.
+  function DefaultVersionChangeHandler() {
+    // Return true to mark the storage as 'upgraded to the new version'.
+    this.onVersionChange = function (
+      hoard,
+      expectedVersion,
+      actualVersion) {
+      // Default behaviour: do nothing.
+      return false;
+    }
+  }
+
+  // An instance of this handler can be supplied in the options
+  // object for a new Hoard; it's behaviour is simply to nuke
+  // old data on a version update.
+  function ClearingVersionChangeHandler() {
+    this.onVersionChange = function (
+      hoard,
+      expectedVersion,
+      actualVersion) {
+      hoard.clear();
+      return true;
     }
   }
 

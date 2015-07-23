@@ -36,10 +36,10 @@ module.exports = function(config) {
       dir: 'coverage'
     },
     thresholdReporter: {
-      statements: 85,
-      branches: 60,
-      functions: 80,
-      lines: 85
+      statements: 92,
+      branches: 79,
+      functions: 92,
+      lines: 93
     }
   });
 };

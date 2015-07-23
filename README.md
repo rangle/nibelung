@@ -8,6 +8,7 @@ Adds the following features to HTML localStorage and sessionStorage
 * Namespacing.
 * The ability to cap the number of records (uses an LRU strategy).
 * A simpler event API.
+* Basic version change detection.
 
 ## Creating a Hoard:
 
@@ -53,6 +54,23 @@ The following options are supported:
   // any function that accepts a string argument. If omitted, no logs will be
   // generated.
   logger: function (message) { ... }
+
+  // Most useful with persistent === true. Checks the given version string
+  // against the current format of any previously saved records. If they don't
+  // match, the versionChangeHandler.onVersionChange() will be called.
+  version: '1',
+
+  // Most useful with persistent === true. If the given version differs from
+  // the version of previously-saved data, onVersionChange will be called with
+  // the new and old versions respectively.  Returning true from
+  // onVersionChange will cause the Hoard to be stamped with the new version;
+  // returning false leaves it unchanged.  This gives you the ability to
+  // react to version changes and handle them (e.g. by clearing the cache, or
+  // upgrading existing records to the new schema).
+  //
+  // As a convenience, we also provide nibelung.ClearingVersionChangeHandler in
+  // case you want to 'upgrade' by just deleting old data.
+  versionChangeHandler: { onVersionChange: function (expectedVersion, actualVersion )}
 }
 ```
 
