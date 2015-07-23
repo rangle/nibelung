@@ -151,6 +151,87 @@ describe('Hoard', function () {
       expect(hoard.getLatest(10)).to.eql([]);
     });
 
+  it('doesn\'t check the version for an unversioned Hoard', function () {
+    var versionChangeHandler = {
+      onVersionChange: sinon.spy(function (h, e, a) {
+        return false;
+      })
+    };
+
+    var h = new nibelung.Hoard({
+      namespace: 'noversion',
+      versionChangeHandler: versionChangeHandler
+    });
+
+    expect(versionChangeHandler.onVersionChange.notCalled).to.eql(true);
+    expect(h.version()).to.eql('');
+  });
+
+  it('doesn\'t report a newly-versioned Hoard', function () {
+    var versionChangeHandler = {
+      onVersionChange: sinon.spy(function () {
+        return false;
+      })
+    };
+
+    var h = new nibelung.Hoard({
+      namespace: 'firstversion',
+      version: '1',
+      versionChangeHandler: versionChangeHandler
+    });
+
+    expect(versionChangeHandler.onVersionChange.notCalled).to.eql(true);
+
+    // But it saves the version anyway.
+    expect(h.version()).to.eql('1');
+  });
+
+  it('reports a changed-version Hoard', function () {
+    var versionChangeHandler = {
+      onVersionChange: sinon.spy(function () {
+        return false;
+      })
+    };
+
+    var h = new nibelung.Hoard({
+      namespace: 'secondversion',
+      version: '1',
+      versionChangeHandler: { onVersionChange: function () { return true; } }
+    });
+    expect(h.version()).to.eql('1');
+
+    var h = new nibelung.Hoard({
+      namespace: 'secondversion',
+      version: '2',
+      versionChangeHandler: versionChangeHandler
+    });
+
+    expect(versionChangeHandler.onVersionChange.calledOnce).to.eql(true);
+    expect(versionChangeHandler.onVersionChange.calledWith(
+      h,
+      '2',
+      '1')).to.eql(true);
+      expect(h.version()).to.eql('1');
+  });
+
+  it('clears the data on a version change if requested', function () {
+    var h = new nibelung.Hoard({
+      namespace: 'secondversion',
+      version: '1',
+      versionChangeHandler: new nibelung.ClearingVersionChangeHandler()
+    });
+
+    h.put(testItems);
+    h = new nibelung.Hoard({
+      namespace: 'secondversion',
+      version: '2',
+      versionChangeHandler: new nibelung.ClearingVersionChangeHandler()
+    });
+
+    expect(h.getOne('a')).to.be.undefined;
+    expect(h.version()).to.eql('2');
+  });
+
   function initMocks() {
     testItems = [{
       id: 'a',
