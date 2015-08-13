@@ -1,6 +1,6 @@
 {
   "name": "nibelung",
-  "version": "0.3.6",
+  "version": "0.3.7",
   "description": "Caching library backed by browser local storage.",
   "keywords": [
     "Cache",
