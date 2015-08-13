@@ -2,7 +2,7 @@
   'use strict';
 
   var R = typeof exports === 'object' ?
-    module.require('ramda') :
+    require('ramda') :
     global.R;
 
   // Actual field names are kept short to reduce space overhead in localStorage.
