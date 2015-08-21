@@ -103,7 +103,7 @@ myCache.put([
 var myStuff = myCache.get([1, 2]);
 
 // Deletes values for keys 1 and 2, ignored key 3.
-myCache.delete([1, 2, 3]);
+myCache.remove([1, 2, 3]);
 ```
 
 ## Events:
