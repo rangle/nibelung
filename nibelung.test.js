@@ -44,6 +44,16 @@ describe('Hoard', function () {
     expect(hoard.getOne(testItems[0].id)).to.eql(undefined);
   });
 
+  it('can clear all its items', function () {
+    hoard.put(testItems, 'id');
+    expect(hoard.get(['a', 'b'])).to.eql(testItems);
+
+    hoard.clear();
+    expect(hoard.get(['a'])).to.eql([]);
+    expect(hoard.get(['b'])).to.eql([]);
+    expect(hoard.get(['a', 'b'])).to.eql([]);
+  });
+
   it('can tell who\'s not in the hoard', function () {
     hoard.put(testItems, 'id');
     expect(hoard.excludes(['a', 'b', 'c'])).to.eql(['c']);
