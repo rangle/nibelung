@@ -54,7 +54,7 @@
 
     this.version = function version() {
       return _cache[fDATA_VERSION + namespace] || '';
-    }
+    };
 
     this.getOne = function getOne(key) {
       return this.get([key])[0];
@@ -86,7 +86,7 @@
       R.forEach(function(key) {
         _dropRecord(key);
       }, keys);
-    }
+    };
 
     /** Filters the keys by what's not already cached. */
     this.excludes = function excludes(keys) {
@@ -107,7 +107,7 @@
     };
 
     this.clear = function clear() {
-      _cache.clear();
+      _dropRecords(_getKeysByLastUpdateTime(_cache));
       __eventSinks[namespace].emit('CLEAR', undefined, _reentrancyProtector);
     };
 
@@ -275,14 +275,14 @@
   function DefaultClock() {
     this.now = function() {
       return Date.now();
-    }
+    };
   }
 
   // Protects emit calls against re-entrancy and exception-prone handlers.
   function DefaultReentrancyProtector() {
     this.protect = function(fn) {
       return window.setTimeout(fn, 0);
-    }
+    };
   }
 
   // Checks for situations where local storage is unavailable.
@@ -291,7 +291,7 @@
       // Test that we can actually use the storage; will throw an exception if
       // we can't.
       storage.setItem('test', true);
-    }
+    };
   }
 
   // This handler is called when you specify an options.version which is
@@ -305,7 +305,7 @@
       actualVersion) {
       // Default behaviour: do nothing.
       return false;
-    }
+    };
   }
 
   // An instance of this handler can be supplied in the options
@@ -318,7 +318,7 @@
       actualVersion) {
       hoard.clear();
       return true;
-    }
+    };
   }
 
   function EventSink(legalEvents) {
@@ -333,7 +333,7 @@
       }
 
       _handlers[event].push(handler);
-    }
+    };
 
     this.off = function off(event, handler) {
       _assertLegalEvent(event);
@@ -341,7 +341,7 @@
       if (_handlers[event]) {
         _handlers[event] = R.reject(R.eq(handler), _handlers[event]);
       }
-    }
+    };
 
     this.emit = function emit(event, data, reentrancyProtector) {
       _assertLegalEvent(event);
@@ -354,7 +354,7 @@
           handler(event, data);
         }, 0);
       }, _handlers[event]);
-    }
+    };
 
     function _assertLegalEvent(event) {
       if (!R.contains(event, _legalEvents)) {
