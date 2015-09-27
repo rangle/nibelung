@@ -34,7 +34,7 @@
       R.keys,
       R.filter(_isKeyInNamespace),
       R.map(_getRecord),
-      R.reject(R.eq(undefined)),
+      R.reject(R.equals(undefined)),
       R.sortBy(R.prop(fLAST_UPDATE_TIME)),
       R.reverse);
 
@@ -50,7 +50,7 @@
     var _getRecordsByKey = R.pipe(
       R.map(_wrapKey),
       R.map(_getRecord),
-      R.reject(R.eq(undefined)));
+      R.reject(R.equals(undefined)));
 
     this.version = function version() {
       return _cache[fDATA_VERSION + namespace] || '';
@@ -339,7 +339,7 @@
       _assertLegalEvent(event);
 
       if (_handlers[event]) {
-        _handlers[event] = R.reject(R.eq(handler), _handlers[event]);
+        _handlers[event] = R.reject(R.identical(handler), _handlers[event]);
       }
     };
 
