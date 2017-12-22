@@ -20,7 +20,7 @@ module.exports = function(config) {
     autoWatch: true,
     singleRun: true,
 
-    browsers: ['PhantomJS', 'Chrome', 'Firefox'],
+    browsers: ['Chrome'],
     reporters: ['progress', 'coverage','threshold'],
     preprocessors: {
       '!(*.test).js': 'coverage'
