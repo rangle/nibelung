@@ -78,8 +78,6 @@
       R.forEach(function (value) {
         _put(value[keyName], value);
       }, values);
-
-      _enforceMaxRecords();
     };
 
     this.remove = function remove(keys) {
@@ -222,6 +220,7 @@
       var cacheKey = _wrapKey(key);
       _cache[cacheKey] = _wrapValue(cacheKey, value);
       __eventSinks[namespace].emit('PUT', value, _reentrancyProtector);
+      _enforceMaxRecords();
     }
 
     function _keyExists(key) {
