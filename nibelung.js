@@ -62,6 +62,7 @@
 
     this.putOne = function putOne(key, value) {
       _put(key, value);
+      _enforceMaxRecords();
     };
 
     this.removeOne = function deleteOne(key) {
